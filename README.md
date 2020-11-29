@@ -1,2 +1,3 @@
-# yt_py_ncurses
-python ncurses youtube browser
+# python ncurses youtube browser
+
+todo: this readme
