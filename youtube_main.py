@@ -6,7 +6,7 @@ import yt_api_init, json, subprocess;
 
 cwd = sys.path[0] + "/";
 #logging tool
-f = open(cwd + "log.txt","w"); f.write(str(sys.path)); f.close();
+#f = open(cwd + "log.txt","w"); f.write(str(sys.path)); f.close();
 
 def loading_scr(scr, mes):
     scr.addstr(0,0,mes);
@@ -122,7 +122,7 @@ def main(main_scr):
     
     
     while(loop):
-        #f = open("./log.txt","a");f.write(str(x));f.close();
+        
         usr_input = main_scr.getch(); #TODO: pass input to screen based on is_visible
         if(usr_input == 27):
             loop = False;
@@ -224,13 +224,14 @@ def main(main_scr):
         
         
         #redraw loop checks what is visible and draws in the correct order. slow but nothing else tried worked.
-        for x in range(5):
-            if(fake_panel[x] == in_focus):#if(is_visible[x]):
-                fake_panel[x][0].redrawwin();
-                try:
-                    fake_panel[x][0].refresh(); #windows
-                except curses.error:
-                    fake_panel[x][0].refresh(fake_panel[x][1],fake_panel[x][2], 0,0, term_h-1,term_w); #pads
+        if(usr_input != -1): #only updates when user interacts with it. allows for text selection with mouse
+            for x in range(5):
+                if(fake_panel[x] == in_focus):#if(is_visible[x]):
+                    fake_panel[x][0].redrawwin();
+                    try:
+                        fake_panel[x][0].refresh(); #windows
+                    except curses.error:
+                        fake_panel[x][0].refresh(fake_panel[x][1],fake_panel[x][2], 0,0, term_h-1,term_w); #pads
         
         time.sleep(0.01);
     #end while loop
