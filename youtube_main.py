@@ -1,18 +1,20 @@
 #main file that handles gui, user input and maybe authentication
 import time, os, sys;
-import curses, locale; 
+import curses, locale, re; 
 import yt_api_init, json, subprocess;
+import read_settings, distutils.util;
 
 
 cwd = sys.path[0] + "/";
 #logging tool
 #f = open(cwd + "log.txt","w"); f.write(str(sys.path)); f.close();
 
+#
 def loading_scr(scr, mes):
     scr.addstr(0,0,mes);
     scr.refresh();
 
-#TODO: get rid of refresh loop and jsut add them on user inputs so it stop spamming refresh and allows for highlighting text
+
 #TODO: add colors
 
 def main(main_scr):
@@ -24,17 +26,19 @@ def main(main_scr):
     main_scr.nodelay(True);
     main_scr.keypad(True);
     
-    
+    #error and clean exit function
+    def except_func(error_msg):
+        loading_scr(main_scr, "Something went wrong. Attempting clean exit...");
+        time.sleep(2);
+        curses.endwin();
+        return error_msg;
     
     ###api initialization###
     loading_scr(main_scr,"Loading API's...");
     try:
         yt_api = yt_api_init.Init();
     except:
-        loading_scr(main_scr, "Something went wrong. Attempting clean exit...");
-        time.sleep(1); #TODO: change to larger value when done
-        curses.endwin();
-        return "youtube api error: unable to load api";
+        return except_func("youtube api error: unable to load api");
     
     
     
@@ -54,10 +58,8 @@ def main(main_scr):
                 yt_sub_pages.append( yt_api.subscriptions().list(mine=True, part="snippet", order="alphabetical", #sub info more pages
                                                             maxResults=50, pageToken=yt_sub_pages[i]["nextPageToken"]).execute() );
         except:
-            loading_scr(main_scr, "Something went wrong. Attempting clean exit...");
-            time.sleep(1); #TODO: change to larger value when done
-            curses.endwin();
-            return "youtube api error: could not get subscription information";
+            return except_func("youtube api error: could not get subscription information");
+        
         
         f = open(cwd + "json/yt_subs/subs","w");
         for i in yt_sub_pages:
@@ -78,6 +80,16 @@ def main(main_scr):
     num_vids = 1000; #TODO: get from api on per channel basis?
     chnl_uplds = [];
     ratings = {"108":"like", "100":"dislike", "110":"none"}; # maps user input to video rating action
+    try:
+        settings_bool = ["True","False"];
+        show_e = bool( distutils.util.strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
+        if(not show_e):
+            e_filter = re.compile(r"[\U0001F1E0-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+");
+        else:
+            e_filter = re.compile(r"q^"); #this regex matches nothing and is efficient unless string ends in lots of "q"
+        is_android = bool( distutils.util.strtobool( read_settings.get_setting("is_android", settings_bool) ));
+    except:
+        return except_func("could not read settings.ini. make sure variable names and values are correct");
     
     
     
@@ -140,16 +152,16 @@ def main(main_scr):
         
         ###arrow key nav###
         if(usr_input == 258 and len(in_focus) > 1 and in_focus[4] < in_focus[3]-1): #scroll pad down with over scroll prevention
-            in_focus[0].addnstr(in_focus[4]+1,0, in_focus[5][in_focus[4]]["title"], term_w);
+            in_focus[0].addnstr(in_focus[4]+1,0, re.sub(e_filter, " ", in_focus[5][in_focus[4]]["title"]), term_w);
             in_focus[4] += 1;
-            in_focus[0].addnstr(in_focus[4]+1,0, in_focus[5][in_focus[4]]["title"], term_w, curses.A_REVERSE);
+            in_focus[0].addnstr(in_focus[4]+1,0, re.sub(e_filter, " ", in_focus[5][in_focus[4]]["title"]), term_w, curses.A_REVERSE);
             if(in_focus[4] > in_focus[1]+term_h-3):
                 in_focus[1] += 1;
         
         if(usr_input == 259 and len(in_focus) > 1 and in_focus[4] > 0): #scroll pad up
-            in_focus[0].addnstr(in_focus[4]+1,0, in_focus[5][in_focus[4]]["title"], term_w);
+            in_focus[0].addnstr(in_focus[4]+1,0, re.sub(e_filter, " ", in_focus[5][in_focus[4]]["title"]), term_w);
             in_focus[4] -= 1;
-            in_focus[0].addnstr(in_focus[4]+1,0, in_focus[5][in_focus[4]]["title"], term_w, curses.A_REVERSE);
+            in_focus[0].addnstr(in_focus[4]+1,0, re.sub(e_filter, " ", in_focus[5][in_focus[4]]["title"]), term_w, curses.A_REVERSE);
             if(in_focus[4] < in_focus[1]):
                 in_focus[1] -= 1;
         
@@ -163,10 +175,7 @@ def main(main_scr):
                     json_uplds = yt_api.playlistItems().list(playlistId=channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"], part="snippet",maxResults=50).execute();
                 except:
                     fake_panel[3][0].erase(); fake_panel[3][0].refresh(0,0,0,0,term_h-1,term_w);
-                    loading_scr(main_scr, "Something went wrong. Attempting clean exit...");
-                    time.sleep(1);
-                    curses.endwin();
-                    return "youtube api error: unable to get channel uploads";
+                    return except_func("youtube api error: unable to get channel uploads");
                 
                 #prepare channel screen for drawing videos by resetting variables
                 fake_panel[3][0].erase();
@@ -181,8 +190,9 @@ def main(main_scr):
                 
                 #draw videos on channel screen
                 for num, vid in enumerate(fake_panel[3][5]):
-                    fake_panel[3][0].addnstr(num+1,0, vid["title"], term_w);
+                    fake_panel[3][0].addnstr(num+1,0, re.sub(e_filter, " ", vid["title"]), term_w);
                 is_visible[3] = True; in_focus = fake_panel[3]; is_visible[2] = False;
+            
             
             elif(in_focus == fake_panel[3]):
                 fake_panel[4][0].erase();
@@ -203,7 +213,11 @@ def main(main_scr):
         
         
         if(usr_input == 32 and in_focus == fake_panel[4]): #space bar to play video
-            subprocess.run([ "mpv","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"] ], stdout=subprocess.DEVNULL);
+            if(is_android):
+                subprocess.run(["youtube-dl","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]], stdout=subprocess.DEVNULL);
+                subprocess.run(["termux-share","$(youtube-dl","--get-filename","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]+")"], stdout=subprocess.DEVNULL);
+            else: #linux and hopefully windows as well
+                subprocess.run([ "mpv","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"] ], stdout=subprocess.DEVNULL);
         
         
         
