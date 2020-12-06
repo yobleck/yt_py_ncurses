@@ -53,7 +53,7 @@ def videos(channel_id, max_videos):
     video_list = [];
     for i in video_pages:
         for j in i["items"]:
-            video_list.append(j);
+            video_list.append(j["snippet"]);
     
     
     return video_list; #video_pages[0]["items"][0];
