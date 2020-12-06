@@ -67,7 +67,7 @@ def main(main_scr):
     
     ###read from settings file###
     try:
-        max_vids = int( read_settings.get_setting("max_videos", [str(i) for i in list(range(50,1050,50))] ) );
+        max_vids = int( read_settings.get_setting("max_videos", [str(i) for i in list(reversed(range(50,1050,50)))] ) );
         settings_bool = ["True","False"];
         show_e = bool( distutils.util.strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
         if(not show_e): #TODO: stop removing Japanese characters
