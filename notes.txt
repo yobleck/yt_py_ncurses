@@ -1,0 +1,44 @@
+API key: AIzaSyB-ud7vkMwmF2q9aVRSgXUpuvSbryVPYyM
+
+json file that stores all watched/unwatched videos per channel has to come from contentDetails not snippet :(
+    get channels from subscription list
+    determine how far back to go
+
+
+
+startup page to choose yt or twitch (password for encrypted json files?)
+    yt page lists subscriptions with sort order and notification on side for new videos (subs optional)
+        channel page shows list of videos (views likes dislike optional)
+            video page shows comment section and like/dislike button
+                video plays with mpv+youtube-dl or vlc
+
+
+controls (subject to change):
+1=youtube
+s=subs
+    
+space=open video/livestream
+arrow_keys=scroll selection
+enter=choose selection
+ll/d/n=like/dislike/none
+
+twitch removed for simplicity
+
+color
+simplify screen refresh
+strip emojis option        https://stackoverflow.com/questions/50888252/extract-unicode-emoticons-in-list-python-3-x   https://stackoverflow.com/questions/940822/regular-expression-syntax-for-match-nothing
+add comments page?
+livestream support
+
+
+android version
+    https://ello.co/dredmorbius/post/tbhdcen5fhgvg8bjfwtvlw
+    https://www.reddit.com/r/Streamlink/comments/cfno18/guide_streamlink_on_android_termux_vlc/?utm_source=amp&utm_medium=&utm_content=post_body
+    termux
+        termux-api app store
+        termux-api pkg
+        python
+            youtube-dl
+    vlc
+    
+    subprocess( youtube-dl --get-filename url) get stdout and pass to termux-share

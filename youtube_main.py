@@ -36,7 +36,8 @@ def main(main_scr):
     ###api initialization###
     loading_scr(main_scr,"Loading API's...");
     try:
-        yt_api = yt_api_init.Init();
+        yt_api = yt_api_init.Init(); #still used for like/dislike
+        import yt_api_request;
     except:
         return except_func("youtube api error: unable to load api");
     
@@ -44,11 +45,15 @@ def main(main_scr):
     
     ###api information download###
     loading_scr(main_scr,"Loading YouTube Channel Info...");
-    my_channel_info = yt_api.channels().list(mine=True, part="snippet").execute(); #get user info
+    try:
+        #my_channel_info = yt_api.channels().list(mine=True, part="snippet").execute(); #get user info TODO: remove
+        my_channel_info= yt_api_request.user_channel_info();
+    except:
+        return except_func("youtube api error: could not retrieve user channel info");
     
     loading_scr(main_scr,"Loading YouTube Subscription Info...");
     #save subscriptions json to file if no file is found
-    yt_subs = [];
+    """yt_subs = []; TODO: remove
     if(len(os.listdir(cwd + "json/yt_subs/")) == 0):
         try:
             num_subs = yt_api.subscriptions().list(mine=True, part="contentDetails", maxResults=1).execute()["pageInfo"]["totalResults"];
@@ -58,7 +63,7 @@ def main(main_scr):
                 yt_sub_pages.append( yt_api.subscriptions().list(mine=True, part="snippet", order="alphabetical", #sub info more pages
                                                             maxResults=50, pageToken=yt_sub_pages[i]["nextPageToken"]).execute() );
         except:
-            return except_func("youtube api error: could not get subscription information");
+            return except_func("youtube api error: could not retrieve subscription information");
         
         
         f = open(cwd + "json/yt_subs/subs","w");
@@ -70,14 +75,18 @@ def main(main_scr):
         f.close();
     else: #open subscription cache file ane read subs
         f = open(cwd + "json/yt_subs/subs","r");
-        yt_subs = [json.loads(x) for x in f.readlines()];
+        yt_subs = [json.loads(x) for x in f.readlines()];"""
+    try:
+        yt_subs = yt_api_request.user_subs();
+    except:
+        return except_func("youtube api error: could not retrieve subscription information");
     num_subs = len(yt_subs);
     
     
     
     ###misc initialization###
     loop = True;
-    num_vids = 1000; #TODO: get from api on per channel basis?
+    max_vids = 1000;
     chnl_uplds = [];
     ratings = {"108":"like", "100":"dislike", "110":"none"}; # maps user input to video rating action
     try:
@@ -97,11 +106,11 @@ def main(main_scr):
     home_scr = curses.newwin(term_h,term_w,0,0);
     yt_scr = curses.newwin(term_h,term_w,0,0);
     sub_pad = curses.newpad(num_subs+2,term_w);
-    chnl_pad = curses.newpad(num_vids,term_w);
+    chnl_pad = curses.newpad(max_vids,term_w);
     vid_scr = curses.newwin(term_h,term_w,0,0);
     
-    #format: if len = 1 then [win]. if len > 1 then [pad,start_y, start_x, max_length, select_pos, list_var]
-    fake_panel = [[home_scr], [yt_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,num_vids,0,chnl_uplds], [vid_scr]];
+    #format: if len = 1 then [win]. if len > 1 then [pad, start_y, start_x, max_length, select_pos, list_var]
+    fake_panel = [[home_scr], [yt_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr]];
     is_visible = [True]+[False]*4;
     in_focus = fake_panel[0];
     
@@ -121,8 +130,8 @@ def main(main_scr):
     home_scr.refresh();
     
     #yt landing page with user channel info
-    yt_scr.addnstr(0,0, "YouTube", term_w, curses.A_UNDERLINE);
-    yt_scr.addstr(1,0, my_channel_info["items"][0]["snippet"]["title"]);
+    yt_scr.addnstr(0,0, "Channel Info:", term_w, curses.A_UNDERLINE);
+    yt_scr.addstr(1,0, my_channel_info["items"][0]["snippet"]["title"], curses.A_UNDERLINE);
     yt_scr.addnstr(2,0, "Channel ID: " + my_channel_info["items"][0]["id"], term_w);
     yt_scr.addnstr(3,0, "Channel Birthday: " + my_channel_info["items"][0]["snippet"]["publishedAt"], term_w);
     
@@ -170,9 +179,10 @@ def main(main_scr):
         if(usr_input == 10):
             if(in_focus == fake_panel[2]): #selecting channel to display uploads
                 #get videos from yt api
-                try:
-                    channel = yt_api.channels().list(id=yt_subs[in_focus[4]]["resourceId"]["channelId"], part="contentDetails").execute();
-                    json_uplds = yt_api.playlistItems().list(playlistId=channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"], part="snippet",maxResults=50).execute();
+                try: #TODO: remove 2 lines below
+                    #channel = yt_api.channels().list(id=yt_subs[in_focus[4]]["resourceId"]["channelId"], part="contentDetails").execute();
+                    #json_uplds = yt_api.playlistItems().list(playlistId=channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"], part="snippet",maxResults=50).execute();
+                    video_list = yt_api_request.videos(yt_subs[in_focus[4]]["resourceId"]["channelId"], 100); #max_vids
                 except:
                     fake_panel[3][0].erase(); fake_panel[3][0].refresh(0,0,0,0,term_h-1,term_w);
                     return except_func("youtube api error: unable to get channel uploads");
@@ -183,10 +193,15 @@ def main(main_scr):
                 fake_panel[3][0].addnstr(0,0, "Channel: " + yt_subs[in_focus[4]]["title"], term_w, curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD);
                 fake_panel[3][5] = [];
                 
-                #create list of videos
-                for vid in json_uplds["items"]:
+                #create list of videos TODO:remove
+                """for vid in json_uplds["items"]:
                     fake_panel[3][5].append(vid["snippet"]);
-                fake_panel[3][3] = len(fake_panel[3][5])
+                fake_panel[3][3] = len(fake_panel[3][5]);"""
+                
+                #add list of videos to screen list
+                for vid in video_list:
+                    fake_panel[3][5].append(vid["snippet"]);
+                fake_panel[3][3] = len(fake_panel[3][5]);
                 
                 #draw videos on channel screen
                 for num, vid in enumerate(fake_panel[3][5]):
