@@ -71,7 +71,9 @@ def main(main_scr):
         settings_bool = ["True","False"];
         show_e = bool( distutils.util.strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
         if(not show_e): #TODO: stop removing Japanese characters
-            e_filter = re.compile(r"[\U0001F1E0-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+");
+            #more aggressive: [\U0001F1E0-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+
+            #less aggressive: [\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+
+            e_filter = re.compile(r"[\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+");
         else:
             e_filter = re.compile(r"q^"); #this regex matches nothing and is efficient unless string ends in lots of "q"
         is_android = bool( distutils.util.strtobool( read_settings.get_setting("is_android", settings_bool) ));
@@ -165,7 +167,7 @@ def main(main_scr):
                 
                 #prepare channel screen for drawing videos by resetting variables
                 fake_panel[3][0].erase();
-                fake_panel[3][1], fake_panel[3][2], fake_panel[3][4] = [0]*3;
+                fake_panel[3][1], fake_panel[3][2], fake_panel[3][4] = [0]*3;  #TODO: show num vids displayed out of total
                 fake_panel[3][0].addnstr(0,0, "Channel: " + yt_subs[in_focus[4]]["title"], term_w, curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD);
                 fake_panel[3][5] = [];
                 
