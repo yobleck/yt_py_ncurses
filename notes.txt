@@ -1,4 +1,3 @@
-API key: AIzaSyB-ud7vkMwmF2q9aVRSgXUpuvSbryVPYyM
 
 json file that stores all watched/unwatched videos per channel has to come from contentDetails not snippet :(
     get channels from subscription list
