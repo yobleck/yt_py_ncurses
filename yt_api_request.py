@@ -11,7 +11,7 @@ def user_channel_info():
 
 ###
 def user_subs():
-    if(len(os.listdir(cwd + "json/yt_subs/")) == 0):
+    if(len(os.listdir(cwd + "json/yt_subs/")) == 0 or not os.path.isfile(cwd + "json/yt_subs/subs")):
         num_subs = yt_api.subscriptions().list(mine=True, part="contentDetails", maxResults=1).execute()["pageInfo"]["totalResults"];
         f = open(cwd + "json/yt_subs/num_subs","w"); f.write(str(num_subs)); f.close();
         

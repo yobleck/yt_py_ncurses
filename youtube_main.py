@@ -2,7 +2,8 @@
 import time, os, sys;
 import curses, locale, re; 
 import yt_api_init, json, subprocess;
-import read_settings, distutils.util;
+import read_settings;
+from distutils.util import strtobool;
 
 
 cwd = sys.path[0] + "/";
@@ -39,8 +40,8 @@ def main(main_scr):
     try:
         yt_api = yt_api_init.Init(); #still used for like/dislike
         import yt_api_request;
-    except:
-        return except_func("youtube api error: unable to load api");
+    except Exception as e:
+        return str(e) + "\n" + except_func("youtube api error: unable to load api");
     
     
     
@@ -48,14 +49,14 @@ def main(main_scr):
     loading_scr(main_scr,"Loading YouTube Channel Info...");
     try:
         my_channel_info= yt_api_request.user_channel_info();
-    except:
-        return except_func("youtube api error: could not retrieve user channel info");
+    except Exception as e:
+        return str(e) + "\n" + except_func("youtube api error: could not retrieve user channel info");
     
     loading_scr(main_scr,"Loading YouTube Subscription Info...");
     try:
         yt_subs = yt_api_request.user_subs();
-    except:
-        return except_func("youtube api error: could not retrieve subscription information");
+    except Exception as e:
+        return str(e) + "\n" + except_func("youtube api error: could not retrieve subscription information");
     num_subs = len(yt_subs);
     
     
@@ -69,29 +70,29 @@ def main(main_scr):
     try:
         max_vids = int( read_settings.get_setting("max_videos", [str(i) for i in list(reversed(range(50,1050,50)))] ) );
         settings_bool = ["True","False"];
-        show_e = bool( distutils.util.strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
-        if(not show_e): #TODO: stop removing Japanese characters
+        show_e = bool( strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
+        if(not show_e):
             #more aggressive: [\U0001F1E0-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+
             #less aggressive: [\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+
             e_filter = re.compile(r"[\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+");
         else:
             e_filter = re.compile(r"q^"); #this regex matches nothing and is efficient unless string ends in lots of "q"
-        is_android = bool( distutils.util.strtobool( read_settings.get_setting("is_android", settings_bool) ));
-    except:
-        return except_func("could not read settings.ini. make sure variable names and values are correct");
+        is_android = bool( strtobool( read_settings.get_setting("is_android", settings_bool) ));
+    except Exception as e:
+        return str(e) + "\n" + except_func("could not read settings.ini. make sure variable names and values are correct");
     
     
     
     ###initialization of screens
     home_scr = curses.newwin(term_h,term_w,0,0);
-    yt_scr = curses.newwin(term_h,term_w,0,0);
+    info_scr = curses.newwin(term_h,term_w,0,0);
     sub_pad = curses.newpad(num_subs+2,term_w);
     chnl_pad = curses.newpad(max_vids+2,term_w);
     vid_scr = curses.newwin(term_h,term_w,0,0);
     
     #format: if len = 1 then [win]. if len > 1 then [pad, start_y, start_x, max_length, select_pos, list_var]
-    fake_panel = [[home_scr], [yt_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr]];
-    is_visible = [True]+[False]*4;
+    fake_panel = [[home_scr], [info_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr]];
+    #is_visible = [True]+[False]*4;
     in_focus = fake_panel[0];
     
     
@@ -110,15 +111,15 @@ def main(main_scr):
     home_scr.refresh();
     
     #yt landing page with user channel info
-    yt_scr.addnstr(0,0, "Channel Info:", term_w, curses.A_UNDERLINE);
-    yt_scr.addstr(1,0, my_channel_info["items"][0]["snippet"]["title"], curses.A_UNDERLINE);
-    yt_scr.addnstr(2,0, "Channel ID: " + my_channel_info["items"][0]["id"], term_w);
-    yt_scr.addnstr(3,0, "Channel Birthday: " + my_channel_info["items"][0]["snippet"]["publishedAt"], term_w);
+    info_scr.addnstr(0,0, "Channel Info:", term_w, curses.A_UNDERLINE);
+    info_scr.addstr(1,0, my_channel_info["items"][0]["snippet"]["title"], curses.A_UNDERLINE);
+    info_scr.addnstr(2,0, "Channel ID: " + my_channel_info["items"][0]["id"], term_w);
+    info_scr.addnstr(3,0, "Channel Birthday: " + my_channel_info["items"][0]["snippet"]["publishedAt"], term_w);
     
     #scrollable and clickable list of user subscriptions
     sub_pad.addstr(0,0, "My YT Subscriptions", curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD); #TODO: add notification of new videos on this page?
     for num, sub in enumerate(yt_subs):
-        sub_pad.addnstr(num+1,0, sub["title"], term_w);
+        sub_pad.addnstr(num+1,0, re.sub(e_filter, " ", sub["title"]), term_w);
     
     
     
@@ -130,12 +131,12 @@ def main(main_scr):
         
         
         if(usr_input == 105): #i show user channel info on screen
-            is_visible[0] = False;
-            is_visible[1] = True; in_focus = fake_panel[1];
+            #is_visible[0] = False;
+            in_focus = fake_panel[1]; #is_visible[1] = True; 
         
         if(usr_input == 115): #s show user subscriptions page
-            is_visible[2] = True; in_focus = fake_panel[2];
-            is_visible[0] = False; is_visible[1] = False; is_visible[3] = False; is_visible[4] = False;
+            in_focus = fake_panel[2]; #is_visible[2] = True; 
+            #is_visible[0] = False; is_visible[1] = False; is_visible[3] = False; is_visible[4] = False;
             #subs page can be accessed from anywhere. hence hiding all other pages
         
         
@@ -161,9 +162,9 @@ def main(main_scr):
                 #get videos from yt api
                 try:
                     video_list = yt_api_request.videos(yt_subs[in_focus[4]]["resourceId"]["channelId"], max_vids); #max_vids
-                except:
+                except Exception as e:
                     fake_panel[3][0].erase(); fake_panel[3][0].refresh(0,0,0,0,term_h-1,term_w);
-                    return except_func("youtube api error: unable to get channel uploads");
+                    return str(e) + "\n" + except_func("youtube api error: unable to get channel uploads");
                 
                 #prepare channel screen for drawing videos by resetting variables
                 fake_panel[3][0].erase();
@@ -178,7 +179,7 @@ def main(main_scr):
                 #draw videos on channel screen
                 for num, vid in enumerate(fake_panel[3][5]):
                     fake_panel[3][0].addnstr(num+1,0, re.sub(e_filter, " ", vid["title"]), term_w);
-                is_visible[3] = True; in_focus = fake_panel[3]; is_visible[2] = False;
+                in_focus = fake_panel[3]; #is_visible[3] = True; is_visible[2] = False;
             
             
             elif(in_focus == fake_panel[3]):
@@ -195,7 +196,7 @@ def main(main_scr):
                 
                 #draw like/dislike
                 fake_panel[4][0].addnstr(fake_panel[4][0].getmaxyx()[0]-1,0, "Like/Dislike status: " + yt_api.videos().getRating(id=in_focus[5][in_focus[4]]["resourceId"]["videoId"]).execute()["items"][0]["rating"], term_w);
-                is_visible[4] = True; in_focus = fake_panel[4]; is_visible[3] = False;
+                in_focus = fake_panel[4]; #is_visible[4] = True; is_visible[3] = False;
         
         
         
@@ -208,7 +209,7 @@ def main(main_scr):
         
         
         
-        if(usr_input in [108,100,110]): #like/dislike/none with l,d,n
+        if(usr_input in [108,100,110] and in_focus == fake_panel[4]): #like/dislike/none with l,d,n
             yt_api.videos().rate(id=fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"], rating=ratings[str(usr_input)]).execute();
             fake_panel[4][0].addnstr(fake_panel[4][0].getmaxyx()[0]-1,0,"Like/Dislike status: " + ratings[str(usr_input)] + "   ", term_w);
         
@@ -216,11 +217,11 @@ def main(main_scr):
         
         if(usr_input == 127): #backspace to go back a page
             if(in_focus == fake_panel[4]): #video to channel
-                is_visible[3] = True; in_focus = fake_panel[3]; is_visible[4] = False;
+                in_focus = fake_panel[3]; #is_visible[3] = True; is_visible[4] = False;
             elif(in_focus == fake_panel[3]): #channels to subs
-                is_visible[2] = True; in_focus = fake_panel[2]; is_visible[3] = False;
+                in_focus = fake_panel[2]; #is_visible[2] = True; is_visible[3] = False;
             elif(in_focus in [fake_panel[1], fake_panel[2]]): #subs and info to home
-                is_visible[0] = True; in_focus = fake_panel[0]; is_visible[1] = False; is_visible[2] = False;
+                in_focus = fake_panel[0]; #is_visible[0] = True; is_visible[1] = False; is_visible[2] = False;
         
         
         
