@@ -1,5 +1,5 @@
 #main file that handles gui, user input and maybe authentication
-import time, os, sys;
+import time, os, sys, glob;
 import curses, locale, re; 
 import yt_api_init, json, subprocess;
 import read_settings;
@@ -30,6 +30,7 @@ def main(main_scr):
     #error and clean exit function
     def except_func(error_msg):
         loading_scr(main_scr, "Something went wrong. Attempting clean exit...");
+        main_scr.refresh();
         time.sleep(2);
         curses.endwin();
         return error_msg;
@@ -186,9 +187,12 @@ def main(main_scr):
                 fake_panel[4][0].erase();
                 fake_panel[4][0].addnstr(0,0,"Video: " + in_focus[5][in_focus[4]]["title"], term_w, curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD);
                 try:
-                    fake_panel[4][0].addnstr(2,0,"Thumbnail: " + in_focus[5][in_focus[4]]["thumbnails"]["maxres"]["url"], term_w);
+                    #fake_panel[4][0].addnstr(2,0,"Thumbnail: " + in_focus[5][in_focus[4]]["thumbnails"]["maxres"]["url"], term_w);
+                    thumb_url = in_focus[5][in_focus[4]]["thumbnails"]["maxres"]["url"];
                 except:
-                    fake_panel[4][0].addnstr(2,0,"Thumbnail: " + in_focus[5][in_focus[4]]["thumbnails"]["default"]["url"], term_w);
+                    #fake_panel[4][0].addnstr(2,0,"Thumbnail: " + in_focus[5][in_focus[4]]["thumbnails"]["default"]["url"], term_w);
+                    thumb_url = in_focus[5][in_focus[4]]["thumbnails"]["default"]["url"];
+                fake_panel[4][0].addnstr(2,0,"Thumbnail: " + thumb_url, term_w);
                 
                 #draw video url
                 fake_panel[4][0].addnstr(3,0,"url: https://www.youtube.com/watch?v=" + in_focus[5][in_focus[4]]["resourceId"]["videoId"], term_w);
@@ -202,16 +206,22 @@ def main(main_scr):
         
         if(usr_input == 32 and in_focus == fake_panel[4]): #space bar to play video
             if(is_android):
-                subprocess.run(["youtube-dl","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]], stdout=subprocess.DEVNULL);
-                subprocess.run(["termux-share","$(youtube-dl","--get-filename","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]+")"], stdout=subprocess.DEVNULL);
+                subprocess.run([ "youtube-dl", "https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]], stdout=subprocess.DEVNULL);
+                subprocess.run([ "termux-share", "$(youtube-dl", "--get-filename", "https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"]+")"], stdout=subprocess.DEVNULL);
             else: #linux and hopefully windows as well
-                subprocess.run([ "mpv","https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"] ], stdout=subprocess.DEVNULL);
+                subprocess.run([ "mpv", "https://www.youtube.com/watch?v="+fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"] ], stdout=subprocess.DEVNULL);
         
         
         
         if(usr_input in [108,100,110] and in_focus == fake_panel[4]): #like/dislike/none with l,d,n
             yt_api.videos().rate(id=fake_panel[3][5][fake_panel[3][4]]["resourceId"]["videoId"], rating=ratings[str(usr_input)]).execute();
             fake_panel[4][0].addnstr(fake_panel[4][0].getmaxyx()[0]-1,0,"Like/Dislike status: " + ratings[str(usr_input)] + "   ", term_w);
+        
+        
+        if(usr_input == 116 and in_focus == fake_panel[4]):
+            subprocess.run(["wget", "-O", cwd + "thumbnails/thumb.jpg", thumb_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL);
+            subprocess.run(["display", cwd + "thumbnails/thumb.jpg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL);
+            os.remove(cwd + "thumbnails/thumb.jpg");
         
         
         
@@ -237,6 +247,12 @@ def main(main_scr):
         
         time.sleep(0.01);
     #end while loop
+    
+    """try:
+        for f in glob.glob(cwd + "thumbnails/*"):
+            os.remove(f);
+    except Exception as e:
+        return str(e) + "\n" + except_func("unable to delete thumbnails");"""
     
     return "clean exit, no errors";
 #end main
