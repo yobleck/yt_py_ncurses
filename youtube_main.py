@@ -55,7 +55,7 @@ def main(main_scr):
     
     loading_scr(main_scr,"Loading YouTube Subscription Info...");
     try:
-        yt_subs = yt_api_request.user_subs();
+        yt_subs, subs_vid_count = yt_api_request.user_subs();
     except Exception as e:
         return str(e) + "\n" + except_func("youtube api error: could not retrieve subscription information");
     num_subs = len(yt_subs);
