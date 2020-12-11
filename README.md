@@ -1,11 +1,13 @@
 # python ncurses youtube browser
 
-todo: this readme
+todo: this readme, new video notifications, properly secure client secrets and api key, dl videos and extract audio
 
 ## requirements
+  - Linux only for now
   - python 3.7+ (package manager of choice)
   - youtube-dl (pip)
   - mpv (package manager of choice)
+  - imagemagick (package manager of choice)
   - google oath python libraries (pip install google-api-core, google-api-python-client, google-auth, google-auth-httplib2, google-auth-oauthlib, googleapis-common-protos)
 
 ## controls
