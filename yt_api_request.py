@@ -1,9 +1,11 @@
 import os, sys, json;
-import yt_api_init;
+import yt_api_init, read_settings;
+from distutils.util import strtobool;
 
 cwd = sys.path[0] + "/";
 
 yt_api = yt_api_init.Init();
+check_new_vids = bool(strtobool(read_settings.get_setting("check_new_vids", ["True","False"])));
 
 ##########
 def user_channel_info():
@@ -21,12 +23,14 @@ def user_subs():
         f = open(cwd + "json/yt_subs/num_subs","w"); f.write(str(num_subs)); f.close();
         
         yt_sub_pages = [];#sub info pages because api request max is 50 items
-        yt_sub_pages.append( yt_api.subscriptions().list(mine=True, part="snippet,contentDetails", order="alphabetical", maxResults=50).execute() );
-        
-        for i in range((num_subs//50)):
+        temp_page_token = None;
+        while(True):
             yt_sub_pages.append( yt_api.subscriptions().list(mine=True, part="snippet,contentDetails", order="alphabetical", #sub info more pages
-                                                        maxResults=50, pageToken=yt_sub_pages[i]["nextPageToken"]).execute() );
-        
+                                                             maxResults=50, pageToken=temp_page_token).execute() );
+            if("nextPageToken" in yt_sub_pages[-1]):
+                temp_page_token = yt_sub_pages[-1]["nextPageToken"];
+            else:
+                break;
         
         f = open(cwd + "json/yt_subs/subs","w"); f2 = open(cwd + "json/yt_subs/subs_vid_count","w");
         yt_subs = [];
@@ -55,12 +59,16 @@ def user_subs():
 def videos(channel_id, max_videos):
     channel = yt_api.channels().list(id=channel_id, part="contentDetails").execute();
     video_pages = [];
-    video_pages.append( yt_api.playlistItems().list(playlistId=channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"], 
-                                                    part="snippet",maxResults=50).execute() );
-    
-    for i in range( (min(max_videos,video_pages[0]["pageInfo"]["totalResults"])//50)-1 ): #TODO: fix rounding error
+    temp_page_token = None;
+    while(True):
         video_pages.append( yt_api.playlistItems().list(playlistId=channel["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"], 
-                                                        part="snippet",maxResults=50, pageToken=video_pages[i]["nextPageToken"]).execute() );
+                                                        part="snippet",maxResults=50, pageToken=temp_page_token).execute() );
+        if("nextPageToken" in video_pages[-1]):
+            temp_page_token = video_pages[-1]["nextPageToken"];
+        else: #if channel has less than 50 or max_videos
+            break;
+        if(len(video_pages) >= max_videos//50): #if channel had more than max_videos then cut off.   maybe put above other if?
+            break;
     
     #TODO: add most recent video id to list that is checked on next startup to look for new videos?
     

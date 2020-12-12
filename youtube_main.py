@@ -126,7 +126,7 @@ def main(main_scr):
     
     while(loop):
         
-        usr_input = main_scr.getch(); #TODO: pass input to screen based on is_visible
+        usr_input = main_scr.getch();
         if(usr_input == 27):
             loop = False;
         
