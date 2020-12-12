@@ -1,6 +1,6 @@
 # python ncurses youtube browser
 
-todo: this readme, new video notifications, properly secure client secrets and api key, dl videos and extract audio
+todo: color coding, new video notifications, properly secure client secrets and api key, dl videos and extract audio, comment sections, livestream staus
 
 ## requirements
   - Linux only for now
@@ -12,7 +12,7 @@ todo: this readme, new video notifications, properly secure client secrets and a
 
 ## controls
   - s = subscription page
-  - i = self cahnnel info page
+  - i = self channel info page
   - arrow keys = navigation
   - enter = select
   - backspace = go back a page
@@ -21,4 +21,5 @@ todo: this readme, new video notifications, properly secure client secrets and a
   - space bar = stream video via youtube-dl and mpv
   
   ## known issues
-    - todo
+    - possible api bug where it fails to return last subscription on page with maxResults=50 returning 49 subs
+    - api livestream status request is ridiculously expensive
