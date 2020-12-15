@@ -55,7 +55,7 @@ def main(main_scr):
     
     loading_scr(main_scr,"Loading YouTube Subscription Info...");
     try:
-        yt_subs, subs_vid_count = yt_api_request.user_subs();
+        yt_subs, subs_vid_count, sub_has_new_vid = yt_api_request.user_subs();
     except Exception as e:
         return str(e) + "\n" + except_func("youtube api error: could not retrieve subscription information");
     num_subs = len(yt_subs);
@@ -66,6 +66,8 @@ def main(main_scr):
     loop = True;
     chnl_uplds = [];
     ratings = {"108":"like", "100":"dislike", "110":"none"}; # maps user input to video rating action
+    max_com = 50;
+    comments = [];
     
     ###read from settings file###
     try:
@@ -73,8 +75,6 @@ def main(main_scr):
         settings_bool = ["True","False"];
         show_e = bool( strtobool( read_settings.get_setting("show_emoji", settings_bool) ));
         if(not show_e):
-            #more aggressive: [\U0001F1E0-\U0001F1FF\U0001F300-\U0001F5FF\U0001F600-\U0001F64F\U0001F680-\U0001F6FF\U0001F700-\U0001F77F\U0001F780-\U0001F7FF\U0001F800-\U0001F8FF\U0001F900-\U0001F9FF\U0001FA00-\U0001FA6F\U0001FA70-\U0001FAFF\U00002702-\U000027B0\U000024C2-\U0001F251]+
-            #less aggressive: [\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+
             e_filter = re.compile(r"[\U0000231A-\U00002B55\U0001F004-\U0001FAD6\U0001F170-\U0001F6F3\U0001F1E6-\U0001F1FC\U0001F3FB-\U0001F3FF]+");
         else:
             e_filter = re.compile(r"q^"); #this regex matches nothing and is efficient unless string ends in lots of "q"
@@ -90,10 +90,10 @@ def main(main_scr):
     sub_pad = curses.newpad(num_subs+2,term_w);
     chnl_pad = curses.newpad(max_vids+2,term_w);
     vid_scr = curses.newwin(term_h,term_w,0,0);
+    com_pad = curses.newpad(max_com+2,term_w);
     
     #format: if len = 1 then [win]. if len > 1 then [pad, start_y, start_x, max_length, select_pos, list_var]
-    fake_panel = [[home_scr], [info_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr]];
-    #is_visible = [True]+[False]*4;
+    fake_panel = [[home_scr], [info_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr], [com_pad,0,0,max_com,0,comments]];
     in_focus = fake_panel[0];
     
     
@@ -102,12 +102,13 @@ def main(main_scr):
     home_scr.addstr(0,0,("Welcome to the YouTube nCurses Browser\n"
                     "Made by: Yobleck\n\n"
                     "Controls:\n"
-                    "\'i\' = Goto Your Channel info\n"
+                    "\'i\' = Goto Your Channel Info\n"
                     "\'s\' = Goto Your Subscriptions\n"
                     "\'Enter\' = Select Channel from Subs or Video from Channel\n"
-                    "\'Backspace\' = Go back a page\n"
-                    "\'Space Bar\' = play video with mpv + youtube-dl streaming\n"
+                    "\'Backspace\' = Go Back a Page\n"
+                    "\'Space Bar\' = Play Video with mpv + youtube-dl Streaming\n"
                     "\'l,d,n\' = Like/Dislike/None\n"
+                    "\'t\' = dl and View Video Thumbnail\n"
                     "note: you can go back to subs anytime\nbut to go back to a channel/video you must go the same way as the first time"));
     home_scr.refresh();
     
@@ -116,6 +117,8 @@ def main(main_scr):
     info_scr.addstr(1,0, my_channel_info["items"][0]["snippet"]["title"], curses.A_UNDERLINE);
     info_scr.addnstr(2,0, "Channel ID: " + my_channel_info["items"][0]["id"], term_w);
     info_scr.addnstr(3,0, "Channel Birthday: " + my_channel_info["items"][0]["snippet"]["publishedAt"], term_w);
+    info_scr.addnstr(4,0, "Country: " + my_channel_info["items"][0]["snippet"]["country"], term_w);
+    info_scr.addstr(5,0, "Thumbnail: " + my_channel_info["items"][0]["snippet"]["thumbnails"]["default"]["url"]);
     
     #scrollable and clickable list of user subscriptions
     sub_pad.addstr(0,0, "My YT Subscriptions", curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD); #TODO: add notification of new videos on this page?
@@ -218,20 +221,25 @@ def main(main_scr):
             fake_panel[4][0].addnstr(fake_panel[4][0].getmaxyx()[0]-1,0,"Like/Dislike status: " + ratings[str(usr_input)] + "   ", term_w);
         
         
-        if(usr_input == 116 and in_focus == fake_panel[4]):
+        if(usr_input == 116 and in_focus == fake_panel[4]): #view thumbnail
             subprocess.run(["wget", "-O", cwd + "thumbnails/thumb.jpg", thumb_url], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL);
             subprocess.run(["display", cwd + "thumbnails/thumb.jpg"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL);
             os.remove(cwd + "thumbnails/thumb.jpg");
         
         
+        if(usr_input == 99 and in_focus == fake_panel[4]): #TODO:comment section
+            pass;
+        
         
         if(usr_input == 127): #backspace to go back a page
-            if(in_focus == fake_panel[4]): #video to channel
-                in_focus = fake_panel[3]; #is_visible[3] = True; is_visible[4] = False;
+            if(in_focus == fake_panel[5]): #comments to video
+                in_focus = fake_panel[4];
+            elif(in_focus == fake_panel[4]): #video to channel
+                in_focus = fake_panel[3];
             elif(in_focus == fake_panel[3]): #channels to subs
-                in_focus = fake_panel[2]; #is_visible[2] = True; is_visible[3] = False;
+                in_focus = fake_panel[2];
             elif(in_focus in [fake_panel[1], fake_panel[2]]): #subs and info to home
-                in_focus = fake_panel[0]; #is_visible[0] = True; is_visible[1] = False; is_visible[2] = False;
+                in_focus = fake_panel[0];
         
         
         
@@ -248,11 +256,6 @@ def main(main_scr):
         time.sleep(0.01);
     #end while loop
     
-    """try:
-        for f in glob.glob(cwd + "thumbnails/*"):
-            os.remove(f);
-    except Exception as e:
-        return str(e) + "\n" + except_func("unable to delete thumbnails");"""
     
     return "clean exit, no errors";
 #end main
