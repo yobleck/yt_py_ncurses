@@ -13,21 +13,22 @@ startup page to choose yt or twitch (password for encrypted json files?)
 
 
 controls (subject to change):
-1=youtube
+i=youtube channel info
 s=subs
     
 space=open video/livestream
 arrow_keys=scroll selection
 enter=choose selection
 ll/d/n=like/dislike/none
+t=thumbnails
 
 twitch removed for simplicity
 
 color
-simplify screen refresh
 strip emojis option        https://stackoverflow.com/questions/50888252/extract-unicode-emoticons-in-list-python-3-x   https://stackoverflow.com/questions/940822/regular-expression-syntax-for-match-nothing
 add comments page?
 livestream support
+
 
 
 android version

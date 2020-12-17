@@ -55,7 +55,7 @@ def main(main_scr):
     
     loading_scr(main_scr,"Loading YouTube Subscription Info...");
     try:
-        yt_subs, subs_vid_count, sub_has_new_vid = yt_api_request.user_subs();
+        yt_subs, subs_vid_count = yt_api_request.user_subs();
     except Exception as e:
         return str(e) + "\n" + except_func("youtube api error: could not retrieve subscription information");
     num_subs = len(yt_subs);
@@ -94,7 +94,7 @@ def main(main_scr):
     
     #format: if len = 1 then [win]. if len > 1 then [pad, start_y, start_x, max_length, select_pos, list_var]
     fake_panel = [[home_scr], [info_scr], [sub_pad,0,0,num_subs,0,yt_subs], [chnl_pad,0,0,max_vids,0,chnl_uplds], [vid_scr], [com_pad,0,0,max_com,0,comments]];
-    in_focus = fake_panel[0];
+    in_focus = fake_panel[0]; #TODO: change yt_subs to yt_subs["title"] + sub_vid_count items 0 and 1
     
     
     
@@ -121,9 +121,11 @@ def main(main_scr):
     info_scr.addstr(5,0, "Thumbnail: " + my_channel_info["items"][0]["snippet"]["thumbnails"]["default"]["url"]);
     
     #scrollable and clickable list of user subscriptions
-    sub_pad.addstr(0,0, "My YT Subscriptions", curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD); #TODO: add notification of new videos on this page?
+    sub_pad.addstr(0,0, "My YT Subscriptions", curses.A_ITALIC | curses.A_UNDERLINE | curses.A_BOLD);
+    sub_pad.addnstr(0,term_w-13, "[posts,  new]", term_w, curses.A_UNDERLINE | curses.A_BOLD);
     for num, sub in enumerate(yt_subs):
         sub_pad.addnstr(num+1,0, re.sub(e_filter, " ", sub["title"]), term_w);
+        sub_pad.addnstr(num+1,term_w-len(str(subs_vid_count[sub["title"]])), str(subs_vid_count[sub["title"]]), term_w);
     
     
     
